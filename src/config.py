@@ -1,0 +1,1 @@
+CAMINHO_PLANILHA = "data/input/agenteAI_planilha.xlsx"
