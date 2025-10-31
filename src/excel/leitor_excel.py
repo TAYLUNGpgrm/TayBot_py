@@ -19,12 +19,12 @@ def ler_planilha(caminho=CAMINHO_PLANILHA):
                 "Municipio": str,
                 "UF": str,
                 "DescricaoServico": str,
-                "CTISS": str,
-                "ItemServico": str,
-                "NaturezaOperacao": str,
-                "RegimeTributacao": str,
-                "MunicipioIncidencia": str,
-                "Valor": str
+                "Valor": str,
+                # "CTISS": str,
+                # "ItemServico": str,
+                # "NaturezaOperacao": str,
+                # "RegimeTributacao": str,
+                # "MunicipioIncidencia": str
             }
         )
         print(f"[SUCESSO] Planilha lida com {len(df)} linhas.")

@@ -10,7 +10,7 @@ def executar_fluxo_total():
     print("[VISUALIZAÇÃO DA PLANILHA]")
     print("[Lendo Planilha Excel]")
     print(df_visualizacao.head())
-
+    
     print("[DADOS REAIS DA PLANILHA]")
     print(df.head())
 

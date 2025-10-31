@@ -2,6 +2,8 @@ from selenium import webdriver
 from selenium.webdriver.edge.service import Service
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 
 def iniciar_bot(dados):
@@ -22,7 +24,7 @@ def iniciar_bot(dados):
         # Acessa o site da prefeitura
         pagina.get("https://bhissdigital.pbh.gov.br/nfse/")
         print("[INFO] Página acessada com sucesso.")
-        time.sleep(2)
+        time.sleep(1)
 
         # Clica no link de login
         link_login = pagina.find_element(By.CSS_SELECTOR, 'a[href="/nfse/pages/security/login.jsf"]')
@@ -71,7 +73,7 @@ def iniciar_bot(dados):
         # Clica na opção de data atual
         pagina.find_element(By.XPATH, '//a[contains(text(), "Clique aqui se for a data atual")]').click()
         print("[INFO] Mês de referência definido como atual.")
-        time.sleep(5)
+        time.sleep(4)
 
         # Confirma data
         botao_confirmar = navegador.find_element(By.ID, "MesReferenciaModalPanelSubview:formMesReferencia:bt_confirmar_comp_subs")
@@ -129,6 +131,12 @@ def iniciar_bot(dados):
             print(f"[SUCESSO] Número preenchido")
             time.sleep(0.3)
 
+            # Complemento
+            pagina.find_element(By.ID, "form:complemento").click()
+            pagina.find_element(By.ID, "form:complemento").send_keys(dados['Complemento'])
+            print(f"[SUCESSO] Campo de complemento, preenchido com sucesso!")
+            time.sleep(0.3)
+
             # Bairro
             pagina.find_element(By.ID, "form:bairro").click()
             pagina.find_element(By.ID, "form:bairro").send_keys(dados["Bairro"])
@@ -149,6 +157,102 @@ def iniciar_bot(dados):
             pagina.find_element(By.ID, "form:descriminacaoServico").send_keys(dados["DescricaoServico"])
             print(f"[SUCESSO] Discriminação do serviço preenchida: {dados['DescricaoServico']}")
             time.sleep(0.5)
+
+            # Seleciona o regime especial de tributação: ME ou EPP do Simples Nacional
+            try:
+                seletor_regime = WebDriverWait(pagina, 10).until(
+                EC.presence_of_element_located((By.ID, "form:regimeEspecialTributacao"))
+            )
+                time.sleep(0.5)  # pequena espera antes da interação
+
+            # Clica no campo e seleciona a opção com value="6"
+                seletor_regime.click()
+                opcao_me_epp = seletor_regime.find_element(By.CSS_SELECTOR, 'option[value="6"]')
+                opcao_me_epp.click()
+                print("[SUCESSO] Regime tributário 'ME ou EPP do Simples Nacional' selecionado.")
+                time.sleep(1.5)  # espera para o AJAX completar
+            except Exception as e:
+                print(f"[ERRO] Falha ao selecionar regime tributário: {e}")
+
+            # Seleciona "Contabilidade, inclusive serviços técnicos e auxiliares"
+
+            # Espera até que o <select> esteja presente
+            espera = WebDriverWait(pagina, 10)
+            campo_cnae = espera.until(EC.presence_of_element_located((By.ID, "form:codigoCnae")))
+
+            # Clica no <select> para garantir que está ativo
+            campo_cnae.click()
+            time.sleep(3)
+            # Espera até que a opção "Serviços odontológicos" esteja presente
+            opcao_odontologia = espera.until(
+            EC.presence_of_element_located((By.XPATH, "//select[@id='form:codigoCnae']/option[text()='Serviços odontológicos']"))
+            )
+            opcao_odontologia.click()
+            print(f"[SUCESSO] Seleção de Serviços Odontológicos feita com sucesso!")
+            # Clica na opção desejada
+
+            # Seleciona "Guia de valores" 
+
+            aba_valores = pagina.find_element(By.XPATH, "//a[contains(@href, \"controlaAbas('aba3')\")]")
+            aba_valores.click()
+            time.sleep(1)
+
+            campo_valor = espera.until(EC.visibility_of_element_located((By.ID, "form:valorServicos")))
+            campo_valor.click()
+            campo_valor.clear()
+            campo_valor.send_keys(dados["Valor"])
+            print(f"[SUCESSO] Valor do serviço preenchido: {dados['Valor']}")
+            time.sleep(1)
+
+           # ***** CLICA NO BOTÃO DE EMITIR NFS-E *****
+
+            try:
+                botao_gerar_nota = WebDriverWait(pagina, 10).until(
+                EC.element_to_be_clickable((By.ID, "form:bt_emitir_NFS-e"))
+                )
+                time.sleep(0.5)     # pequena espera antes do clique
+                botao_gerar_nota.click()
+                print("[SUCESSO] Botão 'Gerar NFS-e' clicado com sucesso.")
+                time.sleep(3)      # espera para o AJAX e carregamento da tela de assinatura
+            except Exception as e:
+                print(f"[ERRO] Falha ao clicar no botão de gerar nota: {e}")
+
+            # ***** NOVO FLUXO: CLIQUE NO BOTÃO DE GERAÇÃO E ASSINATURA *****
+            try:
+                # 1. Tenta clicar no botão principal (Gerar e Assinar Documento)
+                print("[INFO] Tentando clicar no botão de Geração e Assinatura (appletAssinador:btGeracao)...")
+                
+                botao_assinatura = WebDriverWait(pagina, 10).until(
+                    EC.element_to_be_clickable((By.ID, "appletAssinador:btGeracao"))
+                )
+                time.sleep(1) # Pequena pausa antes do clique para estabilizar a página
+                botao_assinatura.click()
+                print("[SUCESSO] Clique em 'Gerar e Assinar Documento' realizado. Aguardando interação com o certificado.")
+
+            except Exception:
+                # 2. Se o botão principal não for encontrado ou clicável, tenta a contingência.
+                print("[AVISO] Botão de Assinatura não encontrado ou falhou. Tentando Atualizar Lista de Certificados...")
+                
+                try:
+                    # Tenta clicar no botão de atualização
+                    botao_atualizar = WebDriverWait(pagina, 5).until(
+                        EC.element_to_be_clickable((By.ID, "refreshButton"))
+                    )
+                    botao_atualizar.click()
+                    print("[SUCESSO] Botão 'Atualizar Lista de Certificados' clicado. Re-tentando Assinatura.")
+                    time.sleep(5) # Espera o refresh e o Applet/extensão carregar
+
+                    # Tenta o clique principal novamente
+                    botao_assinatura_retry = WebDriverWait(pagina, 10).until(
+                        EC.element_to_be_clickable((By.ID, "appletAssinador:btGeracao"))
+                    )
+                    botao_assinatura_retry.click()
+                    print("[SUCESSO] Segundo clique no botão de Geração e Assinatura realizado após a atualização.")
+                
+                except Exception as retry_e:
+                    print(f"[ERRO] Falha crítica no fluxo de Assinatura, mesmo após a atualização. Erro: {retry_e}")
+
+            time.sleep(60) # Mantém a espera longa para o usuário interagir com a janela de certificado.
 
     except Exception as e:
         print(f"[ERRO] Falha ao processar {dados.get('Nome', 'Desconhecido')}: {e}")

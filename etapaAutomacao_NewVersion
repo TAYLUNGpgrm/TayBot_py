@@ -1,0 +1,95 @@
+# # steps/etapa_automacao.py
+
+# # ... (Seus imports e funções de formatação) ...
+# from automation.bot import iniciar_bot # O bot precisa ser importado aqui
+# import pandas as pd
+# import time
+
+# # ... (Funções formatar_cnpj, formatar_cpf, formatar_documento) ...
+
+# def executar_bot(df):
+    
+#     if df.empty:
+#         print("[ALERTA] DataFrame vazio. Nenhuma nota para processar.")
+#         return
+
+#     # ---------------------------------------------------------------------
+#     # *** 1. NOVO CÓDIGO: COPIAR DADOS DO PRESTADOR PARA LINHAS VAZIAS ***
+#     # ---------------------------------------------------------------------
+    
+#     # Pega a primeira linha com dados completos (que é a linha 0 do DataFrame)
+#     # Isso assume que a primeira linha SEMPRE tem o Usuario, Senha e CNPJ do Prestador.
+#     primeira_linha = df.iloc[0].copy() 
+    
+#     # Colunas que representam os dados do PRESTADOR (que são fixos)
+#     colunas_prestador = ["Usuario", "Senha", "CNPJ"]
+    
+#     for coluna in colunas_prestador:
+#         # Preenche os valores nulos (NaN) nessas colunas com o valor da primeira linha.
+#         # Isso garante que todas as notas tenham as credenciais.
+#         df[coluna] = df[coluna].fillna(primeira_linha[coluna])
+
+
+#     # ---------------------------------------------------------------------
+#     # *** 2. INÍCIO DO LOOP COM CONTROLE DA SESSÃO DO NAVEGADOR ***
+#     # ---------------------------------------------------------------------
+
+#     campos_obrigatorios = [
+#         "Usuario", "Senha", "CNPJ", "CpfCnpjTomador", "NomeTomador",
+#         "CEP", "Logradouro", "Numero", "Bairro", "Municipio", "UF",
+#         "DescricaoServico", "Valor", "NaturezaOperacao", "RegimeTributacao", "MunicipioIncidencia"
+#     ]
+    
+#     # Variável de controle: o navegador começa fechado
+#     driver_sessao = None 
+
+#     # ... (dentro da função executar_bot)
+
+#     for index, linha in df.iterrows():
+#         dados = linha.to_dict()
+
+#         # ... (seu bloco IF de validação de campos obrigatórios) ...
+
+#         if all(campo in dados and pd.notna(dados[campo]) for campo in campos_obrigatorios):
+#             # ... (Lógica de execução do bot) ...
+#             pass # O bot é executado aqui
+#         else:
+#             # --- SE ESTIVER INVÁLIDO, O BOT PULA A LINHA ---
+            
+#             # 1. Identifica quais campos estão faltando (como na sua lógica original)
+#             campos_faltando = [
+#                 campo for campo in campos_obrigatorios
+#                 if campo not in dados or pd.isna(dados[campo])
+#             ]
+            
+#             # 2. **[REVISÃO AQUI]** Usa .get() para acessar 'CpfCnpjTomador' e 'NomeTomador' 
+#             # de forma segura, evitando erro se a linha for completamente vazia.
+#             id_cliente = str(linha.get("CpfCnpjTomador", "N/D")).strip()
+#             nome_cliente = str(linha.get("NomeTomador", "Linha Vazia/Incompleta")).strip()
+
+#             # 3. Loga o aviso
+#             print(f"[AVISO] Linha {index} PULADA. Faltam dados críticos (ex: {', '.join(campos_faltando[:3])}). Cliente: {nome_cliente} (Doc: {id_cliente})")
+            
+#             try:
+#                 # Chama a função, passando o estado atual do navegador.
+#                 # O resultado é o novo estado (aberto ou None se falhar)
+#                 driver_sessao = iniciar_bot(dados, driver_sessao)
+                
+#                 if driver_sessao is None:
+#                     # Se o bot retornar None, significa que houve um erro crítico e deve parar.
+#                     print("[ERRO CRÍTICO] Falha no iniciar_bot. Encerrando o loop.")
+#                     break
+                    
+#             except Exception as e:
+#                 print(f"[ERRO GERAL NO LOOP] Falha ao processar {dados['NomeTomador']}: {e}")
+#                 # Continua para a próxima nota, se possível
+#                 time.sleep(2)
+#             else:
+#                 print(f"[ALERTA] Linha {index + 2} ignorada: Dados do Tomador incompletos.")
+
+#     # ---------------------------------------------------------------------
+#     # *** 3. FECHAMENTO DO NAVEGADOR APÓS O TÉRMINO DO LOOP ***
+#     # ---------------------------------------------------------------------
+#     if driver_sessao:
+#         print("\n[SUCESSO] Todas as notas processadas. Fechando navegador.")
+#         driver_sessao.quit()

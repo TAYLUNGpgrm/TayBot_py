@@ -1,4 +1,5 @@
 # steps/etapa_automacao.py
+# steps/etapa_automacao.py
 from automation.bot import iniciar_bot
 import pandas as pd
 import time
@@ -24,27 +25,40 @@ def executar_bot(df):
     campos_obrigatorios = [
         "Usuario", "Senha", "CNPJ", "CpfCnpjTomador", "NomeTomador",
         "CEP", "Logradouro", "Numero", "Bairro", "Municipio", "UF",
-        "DescricaoServico", "CTISS", "ItemServico",
-        "NaturezaOperacao", "RegimeTributacao", "MunicipioIncidencia", "Valor"
+        "DescricaoServico", "Valor"
+        # "NaturezaOperacao", "RegimeTributacao", "MunicipioIncidencia"
     ]
 
-    for _, linha in df.iterrows():
+    for index, linha in df.iterrows(): # Inclui o índice da linha para o log
         dados = linha.to_dict()
 
+        # Verifica se todos os campos obrigatórios estão presentes e NÃO são NaN/vazios
         if all(campo in dados and pd.notna(dados[campo]) for campo in campos_obrigatorios):
+            
             # Formatações
             dados["Usuario"] = str(dados["Usuario"]).zfill(13)
             dados["CNPJ"] = formatar_cnpj(dados["CNPJ"])  # Empresa emissora
             dados["CpfCnpjTomador"] = formatar_documento(dados["CpfCnpjTomador"])  # Cliente
 
-            print(f"[INFO] Processando linha: {dados['NomeTomador']}")
+            print(f"[INFO] Processando linha {index}: {dados['NomeTomador']}")
+            
             try:
-                iniciar_bot(dados)
+                # CHAMA O BOT (VERSÃO SIMPLES: ABRE E FECHA O NAVEGADOR A CADA NOTA)
+                iniciar_bot(dados) 
+                
             except Exception as e:
                 print(f"[ERRO] Falha ao processar {dados['NomeTomador']}: {e}")
+            
             time.sleep(2)
         else:
+            # Lógica para pular a linha (mantida para robustez)
             campos_faltando = [
                 campo for campo in campos_obrigatorios
                 if campo not in dados or pd.isna(dados[campo])
             ]
+            
+            id_cliente = str(linha.get("CpfCnpjTomador", "N/D")).strip()
+            nome_cliente = str(linha.get("NomeTomador", "Linha Vazia/Incompleta")).strip()
+            
+            # Avisa que pulou a linha
+            print(f"[AVISO] Linha {index} PULADA. Faltam dados críticos (ex: {', '.join(campos_faltando[:3])}). Cliente: {nome_cliente} (Doc: {id_cliente})")
